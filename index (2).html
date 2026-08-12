@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QUÊTE SECRÈTE</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+  /* ================================================================
+     À MODIFIER : personnalise la quête ici
+     ================================================================
+     - her-name / your-name : les prénoms affichés dans le dialogue
+     - notify-topic : un mot PRIVÉ et difficile à deviner
+       (ex: "loveboy-9f2k1"). Ça te permet d'être notifié dès qu'elle
+       termine la quête. Configuration (30 secondes) :
+         1. Choisis un mot-clé aléatoire ci-dessous (garde-le secret,
+            n'utilise pas un mot commun — n'importe qui le connaissant
+            pourrait voir ta notification).
+         2. Sur ton téléphone/ordinateur, va sur
+            https://ntfy.sh/<ton-mot-clé> et clique sur "Subscribe",
+            OU installe l'appli gratuite "ntfy" et abonne-toi au même mot-clé.
+         3. C'est tout — pas d'inscription, pas de clé API. Quand elle
+            termine la quête, tu reçois une notification instantanée.
+  ================================================================= */
+  :root{
+    --her-name: "Noam";
+    --your-name: "Moi";
+    --meet-time: "20:00";
+    --notify-topic: "noam-quest-ax5v9q1x";
+
+    --gb-darkest:#4a1942;
+    --gb-dark:#8a3b6b;
+    --gb-light:#e8a5bd;
+    --gb-lightest:#fbe4ec;
+    --shell:#e8b4bc;
+    --shell-dark:#c9899a;
+    --amber:#e6b566;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0; height:100%;
+    background:#000;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'VT323', monospace;
+    overflow:hidden;
+    position:relative;
+  }
+  .flag-bg{
+    position:fixed; inset:0; z-index:0;
+    display:flex;
+  }
+  .flag-fr{
+    flex:1;
+    background: linear-gradient(to right, #0055A4 0% 33.33%, #ffffff 33.33% 66.66%, #EF4135 66.66% 100%);
+  }
+  .flag-il{
+    flex:1;
+    background:#ffffff;
+    position:relative;
+  }
+  .flag-il::before,
+  .flag-il::after{
+    content:"";
+    position:absolute; left:0; right:0;
+    height:11%;
+    background:#0038B8;
+  }
+  .flag-il::before{ top:8%; }
+  .flag-il::after{ bottom:8%; }
+  .flag-il-star{
+    position:absolute;
+    top:50%; left:50%;
+    width:22%;
+    aspect-ratio:1;
+    transform:translate(-50%,-50%);
+  }
+  .flag-bg-overlay{
+    position:fixed; inset:0; z-index:1;
+    background: radial-gradient(circle at 50% 20%, rgba(20,10,20,.55), rgba(10,5,10,.8) 70%);
+  }
+  .console{ position:relative; z-index:2; }
+  .controls{ position:relative; z-index:2; }
+  .console{
+    width:min(92vw,380px);
+    background:linear-gradient(180deg,var(--shell),var(--shell-dark));
+    border-radius:22px 22px 60px 22px;
+    padding:22px 22px 30px;
+    box-shadow:0 0 60px 10px rgba(232,165,189,.25), 0 20px 50px rgba(0,0,0,.6), inset 0 2px 0 rgba(255,255,255,.35);
+    position:relative;
+  }
+  .brand{
+    text-align:right;
+    font-family:'Press Start 2P', monospace;
+    font-size:9px;
+    color:#3a3a46;
+    letter-spacing:1px;
+    margin-bottom:8px;
+  }
+  .screen-frame{
+    background:var(--gb-darkest);
+    border-radius:6px;
+    padding:14px;
+    box-shadow:inset 0 0 0 3px var(--amber), inset 0 0 30px rgba(74,25,66,.8);
+  }
+  .screen{
+    background:var(--gb-lightest);
+    aspect-ratio: 10/9;
+    border-radius:2px;
+    position:relative;
+    overflow:hidden;
+    padding:14px;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+  }
+  .screen::after{
+    content:"";
+    position:absolute; inset:0;
+    background:repeating-linear-gradient(rgba(74,25,66,.08) 0 1px, transparent 1px 3px);
+    pointer-events:none;
+  }
+  .hud{
+    font-family:'Press Start 2P', monospace;
+    font-size:8px;
+    color:var(--gb-darkest);
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+  }
+  .hearts{ letter-spacing:2px; }
+  .dialogue-box{
+    background:var(--gb-lightest);
+    border:3px solid var(--gb-darkest);
+    border-radius:3px;
+    padding:10px 12px;
+    min-height:96px;
+    color:var(--gb-darkest);
+    font-size:20px;
+    line-height:1.25;
+    white-space:pre-line;
+  }
+  .cursor{
+    display:inline-block;
+    width:9px; height:16px;
+    background:var(--gb-darkest);
+    vertical-align:middle;
+    margin-left:2px;
+    animation: blink 0.8s steps(1) infinite;
+  }
+  @keyframes blink{ 50%{ opacity:0; } }
+
+  .choices{
+    display:flex; gap:10px; margin-top:10px;
+    position:relative;
+    min-height:44px;
+  }
+  .choices.hidden{ display:none; }
+  .choice-btn{
+    flex:1;
+    font-family:'Press Start 2P', monospace;
+    font-size:10px;
+    padding:10px 6px;
+    background:var(--gb-darkest);
+    color:var(--gb-lightest);
+    border:none;
+    border-radius:3px;
+    cursor:pointer;
+  }
+  #dodgeBtn{ position:relative; transition: transform .12s ease; }
+  #dodgeBtn:active{ transform:scale(.95); }
+
+  .controls{
+    display:flex; justify-content:space-between; align-items:center;
+    margin-top:20px; padding:0 6px;
+  }
+  .dpad{
+    width:60px; height:60px; position:relative;
+  }
+  .dpad div{
+    position:absolute; background:#7a3b5e; border-radius:2px;
+  }
+  .dpad .v{ width:18px; height:60px; left:21px; }
+  .dpad .h{ width:60px; height:18px; top:21px; }
+  .name-buttons{
+    display:flex;
+    gap:6px;
+    align-items:flex-end;
+  }
+  .name-buttons span{
+    width:26px; height:26px;
+    border-radius:50%;
+    background:#c9436b;
+    color:#ffe3ec;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Press Start 2P', monospace;
+    font-size:9px;
+    box-shadow: inset 0 -3px 0 rgba(0,0,0,.25);
+  }
+  .name-buttons span:nth-child(1){ transform: translateY(-6px); }
+  .name-buttons span:nth-child(2){ transform: translateY(4px); }
+  .name-buttons span:nth-child(3){ transform: translateY(-2px); }
+  .name-buttons span:nth-child(4){ transform: translateY(6px); }
+  .name-buttons span:nth-child(5){ transform: translateY(-4px); }
+  .name-buttons span:nth-child(6){ transform: translateY(3px); }
+
+  #confettiLayer{
+    position:fixed; inset:0; pointer-events:none; overflow:hidden; z-index:5;
+  }
+  .confetti-piece{
+    position:absolute; top:-24px;
+    animation: fall linear forwards;
+    line-height:1;
+  }
+  @keyframes fall{
+    to{ transform: translateY(115vh) rotate(360deg); }
+  }
+
+  #ambientHearts{
+    position:fixed; inset:0; pointer-events:none; overflow:hidden; z-index:1;
+  }
+  .ambient-heart{
+    position:absolute;
+    bottom:-30px;
+    opacity:.35;
+    animation: floatUp linear infinite;
+  }
+  @keyframes floatUp{
+    from{ transform: translateY(0) translateX(0); opacity:0; }
+    10%{ opacity:.35; }
+    90%{ opacity:.2; }
+    to{ transform: translateY(-110vh) translateX(var(--drift,20px)); opacity:0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="flag-bg">
+  <div class="flag-fr"></div>
+  <div class="flag-il">
+    <svg class="flag-il-star" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="50,5 95,80 5,80" fill="none" stroke="#0038B8" stroke-width="6"/>
+      <polygon points="50,95 95,20 5,20" fill="none" stroke="#0038B8" stroke-width="6"/>
+    </svg>
+  </div>
+</div>
+<div class="flag-bg-overlay"></div>
+
+<div class="console">
+  <div class="brand">TON INTERVIEWEUR</div>
+  <div class="screen-frame">
+    <div class="screen">
+      <div class="hud">
+        <span id="hudLeft">QUÊTE</span>
+        <span class="hearts" id="heartsHud">♥♡♡</span>
+      </div>
+
+      <div>
+        <div class="dialogue-box" id="dialogue"><span id="dialogueText"></span><span class="cursor"></span></div>
+        <div class="choices" id="choices">
+          <button class="choice-btn" id="mainBtn"></button>
+          <button class="choice-btn" id="dodgeBtn"></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="dpad"><div class="v"></div><div class="h"></div></div>
+    <div class="name-buttons" id="nameButtons"></div>
+  </div>
+</div>
+
+<div id="ambientHearts"></div>
+<div id="confettiLayer"></div>
+
+<script>
+  const root = getComputedStyle(document.documentElement);
+  const herName   = root.getPropertyValue('--her-name').trim().replace(/"/g,'');
+  const yourName  = root.getPropertyValue('--your-name').trim().replace(/"/g,'');
+  const meetTime  = root.getPropertyValue('--meet-time').trim().replace(/"/g,'');
+  const topic     = root.getPropertyValue('--notify-topic').trim().replace(/"/g,'');
+
+  const dialogueText = document.getElementById('dialogueText');
+  const heartsHud     = document.getElementById('heartsHud');
+  const hudLeft        = document.getElementById('hudLeft');
+  const choices        = document.getElementById('choices');
+  const mainBtn         = document.getElementById('mainBtn');
+  const dodgeBtn         = document.getElementById('dodgeBtn');
+
+  const steps = [
+    {
+      hud: "QUÊTE 1/4",
+      hearts: "♥♡♡♡",
+      lines: `> ${herName}, alerte mission !\n> (Non, tu n'as pas le droit\n> de fermer l'onglet 😏)\n> Es-tu d'accord de venir\n> avec moi à un rendez-vous jeudi ?`,
+      mainLabel: "▶ OUI",
+      dodgeLabel: "▶ NON"
+    },
+    {
+      hud: "QUÊTE 2/4",
+      hearts: "♥♥♡♡",
+      lines: `> SUPER ! La quête continue.\n> Choisis ton destin :\n> glace... ou vrai repas ?`,
+      mainLabel: "▶ VRAI REPAS",
+      dodgeLabel: "▶ GLACE"
+    },
+    {
+      hud: "QUÊTE 3/4",
+      hearts: "♥♥♥♡",
+      lines: `> ENCORE EN VIE ?!\n> Nouveau choix :\n> vin... ou bière ?`,
+      mainLabel: "▶ VIN",
+      dodgeLabel: "▶ BIÈRE",
+      staticTaunt: "Certainement pas, Noam !"
+    },
+    {
+      hud: "QUÊTE 4/4",
+      hearts: "♥♥♥♥",
+      lines: `> ÉPREUVE FINALE !\n> ${meetTime}, ça te va ?\n> Choisis bien...`,
+      mainLabel: "▶ OUI",
+      dodgeLabel: "▶ NON"
+    }
+  ];
+
+  let stepIndex = 0;
+  let dodgeCount = 0;
+
+  function typeText(text, onDone){
+    dialogueText.textContent = "";
+    let i = 0;
+    (function tick(){
+      if(i <= text.length){
+        dialogueText.textContent = text.slice(0,i);
+        i++;
+        setTimeout(tick, 16);
+      } else if(onDone){ onDone(); }
+    })();
+  }
+
+  function resetDodgeButton(){
+    dodgeBtn.style.position = 'relative';
+    dodgeBtn.style.left = '0px';
+    dodgeBtn.style.top = '0px';
+  }
+
+  function loadStep(){
+    dodgeCount = 0;
+    resetDodgeButton();
+    const s = steps[stepIndex];
+    hudLeft.textContent = s.hud;
+    heartsHud.textContent = s.hearts;
+    mainBtn.textContent = s.mainLabel;
+    dodgeBtn.textContent = s.dodgeLabel;
+    choices.classList.remove('hidden');
+    typeText(s.lines);
+  }
+
+  function dodge(){
+    const s = steps[stepIndex];
+    if(s.staticTaunt){
+      dodgeBtn.textContent = s.staticTaunt;
+      return;
+    }
+    dodgeCount++;
+    const screen = document.querySelector('.screen').getBoundingClientRect();
+    const btn = dodgeBtn.getBoundingClientRect();
+    const maxX = screen.width - btn.width - 40;
+    const maxY = screen.height - btn.height - 40;
+    const x = Math.random() * maxX - maxX/2;
+    const y = Math.random() * maxY - maxY/2;
+    dodgeBtn.style.left = x + 'px';
+    dodgeBtn.style.top = y + 'px';
+    const taunts = ["...PAS UNE\nOPTION", "TROP LENT !", "CONTINUE\nD'ESSAYER", "PRESQUE !"];
+    if(dodgeCount % 3 === 0){
+      const original = s.dodgeLabel;
+      dodgeBtn.textContent = taunts[(dodgeCount/3-1) % taunts.length];
+      setTimeout(()=>{ dodgeBtn.textContent = original; }, 500);
+    }
+  }
+  dodgeBtn.addEventListener('mouseenter', dodge);
+  dodgeBtn.addEventListener('touchstart', dodge, {passive:true});
+  dodgeBtn.addEventListener('mouseleave', () => {
+    const s = steps[stepIndex];
+    if(s.staticTaunt){ dodgeBtn.textContent = s.dodgeLabel; }
+  });
+
+  mainBtn.addEventListener('click', () => {
+    stepIndex++;
+    if(stepIndex < steps.length){
+      loadStep();
+    } else {
+      finish();
+    }
+  });
+
+  function finish(){
+    choices.classList.add('hidden');
+    hudLeft.textContent = "QUÊTE GAGNÉE";
+    heartsHud.textContent = "♥♥♥♥";
+    typeText(`> QUÊTE TERMINÉE !\n> Rendez-vous à 20h,\n> on a hâte de te voir !\n> Les détails arrivent\n> dans ta boîte mail 💌`);
+    launchConfetti();
+    notifyMe();
+  }
+
+  function notifyMe(){
+    if(!topic || topic.indexOf('CHANGE-MOI') !== -1) return;
+    fetch(`https://ntfy.sh/${encodeURIComponent(topic)}`, {
+      method: 'POST',
+      body: `${herName} a terminé la quête ! Dîner, ${meetTime}, vrai repas. 🎉`,
+      headers: { 'Title': 'Elle a dit oui !', 'Tags': 'tada,heart' }
+    }).catch(()=>{ /* échoue silencieusement, la page fonctionne quand même */ });
+  }
+
+  function launchConfetti(){
+    const colors = ['#e8a5bd','#e6b566','#c9436b','#fbe4ec','#8a3b6b'];
+    const glyphs = ['♥','❤','♡'];
+    const layer = document.getElementById('confettiLayer');
+    for(let n=0; n<80; n++){
+      const p = document.createElement('span');
+      p.className = 'confetti-piece';
+      p.textContent = glyphs[Math.floor(Math.random()*glyphs.length)];
+      p.style.left = Math.random()*100 + 'vw';
+      p.style.color = colors[Math.floor(Math.random()*colors.length)];
+      p.style.fontSize = (12 + Math.random()*14) + 'px';
+      p.style.animationDuration = (2 + Math.random()*2) + 's';
+      p.style.animationDelay = (Math.random()*0.6) + 's';
+      layer.appendChild(p);
+      setTimeout(()=>p.remove(), 4500);
+    }
+  }
+
+  const nameButtons = document.getElementById('nameButtons');
+  herName.toUpperCase().split('').forEach(letter => {
+    const span = document.createElement('span');
+    span.textContent = letter;
+    nameButtons.appendChild(span);
+  });
+
+  loadStep();
+</script>
+
+</body>
+</html>
